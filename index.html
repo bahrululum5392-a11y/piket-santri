@@ -140,7 +140,7 @@
                 <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
                     <i class="fa-regular fa-calendar-check text-emerald-500"></i> Papan Jadwal
                 </h2>
-                <button onclick="hapusSemuaData()" class="text-sm text-red-500 hover:text-red-700 font-medium flex items-center gap-1 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md transition-colors">
+                <button onclick="bukaModalKosongkan()" class="text-sm text-red-500 hover:text-red-700 font-medium flex items-center gap-1 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md transition-colors">
                     <i class="fa-solid fa-trash-can"></i> Kosongkan
                 </button>
             </div>
@@ -160,30 +160,88 @@
         </div>
     </div>
 
+    <!-- Modal Konfirmasi Hapus Semua (Pengganti confirm()) -->
+    <div id="confirmModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 transition-opacity">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-red-500"></i> Kosongkan Jadwal?
+            </h3>
+            <p class="text-gray-600 mb-6 text-sm">Apakah Anda yakin ingin menghapus semua jadwal piket? Tindakan ini tidak dapat dibatalkan.</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="tutupModalKosongkan()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Batal</button>
+                <button onclick="konfirmasiKosongkan()" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm">Ya, Kosongkan</button>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript Logika Aplikasi -->
-    <script>
-        // 1. Inisialisasi Data dari Local Storage (Penyimpanan Browser)
-        // Jika tidak ada data sebelumnya, gunakan array kosong []
-        let daftarPiket = JSON.parse(localStorage.getItem('dataPiketSantri')) || [];
-        
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, onSnapshot, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         // Daftar hari berurutan
         const namaHari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+        let daftarPiket = [];
+        
+        // 1. Konfigurasi Penyimpanan Data Permanen (Firebase Cloud Storage)
+        let db, jadawalRef, isCloud = false;
+        
+        try {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'smart-piket-default';
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+            
+            if (firebaseConfig) {
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                db = getFirestore(app);
+                
+                // Menyiapkan referensi database awan publik
+                jadawalRef = collection(db, 'artifacts', appId, 'public', 'data', 'jadwalPiket');
+                
+                const initAuth = async () => {
+                    // Otentikasi agar data tersimpan aman
+                    if (typeof __initial_auth_token !== 'undefined') {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    
+                    if (!auth.currentUser) return;
+                    isCloud = true;
+                    
+                    // Mendengarkan perubahan data di Cloud secara real-time
+                    onSnapshot(jadawalRef, (snapshot) => {
+                        daftarPiket = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        window.renderJadwal();
+                    }, (error) => {
+                        console.error("Gagal memuat data dari cloud:", error);
+                        window.tampilkanToast("Terjadi kesalahan sinkronisasi data.", "danger");
+                    });
+                };
+                initAuth();
+            }
+        } catch (error) {
+            console.log("Menjalankan dalam mode lokal", error);
+        }
+
+        // Jika tidak tersambung cloud, gunakan penyimpanan lokal browser
+        if (!isCloud) {
+            daftarPiket = JSON.parse(localStorage.getItem('dataPiketSantri')) || [];
+            window.onload = () => window.renderJadwal();
+        }
 
         // 2. Fungsi untuk merender (menampilkan) jadwal ke layar
-        function renderJadwal() {
+        window.renderJadwal = function() {
             const grid = document.getElementById('scheduleGrid');
-            grid.innerHTML = ''; // Kosongkan grid terlebih dahulu
+            grid.innerHTML = ''; 
 
-            // Loop untuk setiap hari dalam seminggu
             namaHari.forEach(hari => {
-                // Saring data piket hanya untuk hari yang sedang di-loop
                 const piketHariIni = daftarPiket.filter(piket => piket.hari === hari);
 
-                // Buat kartu (card) untuk hari tersebut
                 const card = document.createElement('div');
                 card.className = 'bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden fade-in';
                 
-                // Header kartu (Nama Hari)
                 let cardHTML = `
                     <div class="bg-emerald-50 px-4 py-3 border-b border-emerald-100 flex justify-between items-center">
                         <h3 class="font-bold text-emerald-800">${hari}</h3>
@@ -194,17 +252,10 @@
                     <ul class="p-0 m-0 divide-y divide-gray-100">
                 `;
 
-                // Jika tidak ada yang piket di hari ini
                 if (piketHariIni.length === 0) {
-                    cardHTML += `
-                        <li class="px-4 py-6 text-center text-gray-400 text-sm italic">
-                            Belum ada jadwal
-                        </li>
-                    `;
+                    cardHTML += `<li class="px-4 py-6 text-center text-gray-400 text-sm italic">Belum ada jadwal</li>`;
                 } else {
-                    // Jika ada, buat daftar (list) untuk setiap santri
                     piketHariIni.forEach(piket => {
-                        // Cek status selesai untuk styling coretan (strikethrough)
                         const textStyle = piket.selesai ? 'line-through text-gray-400' : 'text-gray-700';
                         const checkIcon = piket.selesai ? 'fa-solid fa-circle-check text-emerald-500' : 'fa-regular fa-circle text-gray-300';
                         const bgStyle = piket.selesai ? 'bg-gray-50' : 'bg-white hover:bg-gray-50';
@@ -227,111 +278,111 @@
                         `;
                     });
                 }
-
                 cardHTML += `</ul>`;
                 card.innerHTML = cardHTML;
                 grid.appendChild(card);
             });
-        }
+        };
 
         // 3. Menangani Pengiriman Formulir (Tambah Data)
-        document.getElementById('piketForm').addEventListener('submit', function(e) {
-            e.preventDefault(); // Mencegah halaman me-refresh
+        document.getElementById('piketForm').addEventListener('submit', async function(e) {
+            e.preventDefault(); 
+            const nama = document.getElementById('namaSantri').value.trim();
+            const hari = document.getElementById('hariPiket').value;
+            const tugas = document.getElementById('tugasPiket').value;
 
-            // Mengambil nilai dari inputan
-            const inputNama = document.getElementById('namaSantri').value.trim();
-            const inputHari = document.getElementById('hariPiket').value;
-            const inputTugas = document.getElementById('tugasPiket').value;
+            const dataBaru = { nama, hari, tugas, selesai: false };
 
-            // Membuat objek data baru
-            const dataBaru = {
-                id: Date.now().toString(), // ID unik menggunakan timestamp
-                nama: inputNama,
-                hari: inputHari,
-                tugas: inputTugas,
-                selesai: false // Default status belum selesai
-            };
-
-            // Tambahkan ke array dan simpan ke local storage
-            daftarPiket.push(dataBaru);
-            simpanData();
+            if (isCloud && jadawalRef) {
+                // Simpan ke Cloud (ID otomatis dibuat)
+                await addDoc(jadawalRef, dataBaru);
+            } else {
+                // Simpan secara lokal (mode fallback)
+                dataBaru.id = Date.now().toString();
+                daftarPiket.push(dataBaru);
+                localStorage.setItem('dataPiketSantri', JSON.stringify(daftarPiket));
+                window.renderJadwal();
+            }
             
-            // Reset formulir dan render ulang layar
             this.reset();
-            renderJadwal();
-            tampilkanToast(`Berhasil menambahkan ${inputNama} ke hari ${inputHari}!`, 'success');
+            window.tampilkanToast(`Berhasil menambahkan ${nama} ke hari ${hari}!`, 'success');
         });
 
         // 4. Fungsi Mengubah Status Selesai/Belum Selesai
-        function toggleStatus(id) {
-            // Cari data berdasarkan ID, lalu balikkan status 'selesai'-nya
-            daftarPiket = daftarPiket.map(piket => {
-                if (piket.id === id) {
-                    return { ...piket, selesai: !piket.selesai };
-                }
-                return piket;
-            });
-            simpanData();
-            renderJadwal();
-        }
+        window.toggleStatus = async function(id) {
+            const piket = daftarPiket.find(p => p.id === id);
+            if (!piket) return;
+
+            if (isCloud && db) {
+                // Update ke Cloud
+                const docRef = doc(jadawalRef, id);
+                await updateDoc(docRef, { selesai: !piket.selesai });
+            } else {
+                piket.selesai = !piket.selesai;
+                localStorage.setItem('dataPiketSantri', JSON.stringify(daftarPiket));
+                window.renderJadwal();
+            }
+        };
 
         // 5. Fungsi Menghapus Satu Data Piket
-        function hapusPiket(id) {
-            // Saring array, buang data yang ID-nya cocok dengan yang dihapus
-            daftarPiket = daftarPiket.filter(piket => piket.id !== id);
-            simpanData();
-            renderJadwal();
-            tampilkanToast('Jadwal berhasil dihapus.', 'info');
-        }
-
-        // 6. Fungsi Menghapus Semua Data (Kosongkan)
-        function hapusSemuaData() {
-            // Kita buat konfirmasi kustom sederhana menggunakan fitur DOM agar tidak menggunakan alert() bawaan
-            const konfirmasi = window.confirm("Apakah Anda yakin ingin menghapus seluruh jadwal piket?");
-            if (konfirmasi) {
-                daftarPiket = [];
-                simpanData();
-                renderJadwal();
-                tampilkanToast('Semua jadwal telah dikosongkan.', 'danger');
+        window.hapusPiket = async function(id) {
+            if (isCloud && db) {
+                // Hapus dari Cloud
+                const docRef = doc(jadawalRef, id);
+                await deleteDoc(docRef);
+            } else {
+                daftarPiket = daftarPiket.filter(p => p.id !== id);
+                localStorage.setItem('dataPiketSantri', JSON.stringify(daftarPiket));
+                window.renderJadwal();
             }
-        }
+            window.tampilkanToast('Jadwal berhasil dihapus.', 'info');
+        };
 
-        // 7. Fungsi Pembantu untuk Menyimpan Data ke Local Storage
-        function simpanData() {
-            localStorage.setItem('dataPiketSantri', JSON.stringify(daftarPiket));
-        }
+        // 6. Fungsi Buka/Tutup Modal Konfirmasi Kosongkan
+        window.bukaModalKosongkan = function() {
+            document.getElementById('confirmModal').classList.remove('hidden');
+            document.getElementById('confirmModal').classList.add('flex');
+        };
 
-        // 8. Fungsi Notifikasi Toast (Pengganti Alert)
-        function tampilkanToast(pesan, tipe = 'success') {
+        window.tutupModalKosongkan = function() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            document.getElementById('confirmModal').classList.remove('flex');
+        };
+
+        // 7. Fungsi Konfirmasi Menghapus Semua Data
+        window.konfirmasiKosongkan = async function() {
+            if (isCloud && db) {
+                // Hapus satu per satu dari cloud database
+                for (const piket of daftarPiket) {
+                    const docRef = doc(jadawalRef, piket.id);
+                    await deleteDoc(docRef);
+                }
+            } else {
+                daftarPiket = [];
+                localStorage.setItem('dataPiketSantri', JSON.stringify(daftarPiket));
+                window.renderJadwal();
+            }
+            window.tutupModalKosongkan();
+            window.tampilkanToast('Semua jadwal telah dikosongkan.', 'danger');
+        };
+
+        // 8. Fungsi Notifikasi Toast 
+        window.tampilkanToast = function(pesan, tipe = 'success') {
             const toast = document.getElementById('toast');
             const toastMessage = document.getElementById('toastMessage');
             const toastIcon = document.getElementById('toastIcon');
 
             toastMessage.textContent = pesan;
             
-            // Ganti ikon berdasarkan tipe notifikasi
-            if(tipe === 'success') {
-                toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
-            } else if(tipe === 'danger') {
-                toastIcon.className = "fa-solid fa-triangle-exclamation text-red-400";
-            } else {
-                toastIcon.className = "fa-solid fa-circle-info text-blue-400";
-            }
+            if(tipe === 'success') toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
+            else if(tipe === 'danger') toastIcon.className = "fa-solid fa-triangle-exclamation text-red-400";
+            else toastIcon.className = "fa-solid fa-circle-info text-blue-400";
 
-            // Tampilkan toast
             toast.classList.remove('translate-y-20', 'opacity-0');
-            
-            // Sembunyikan setelah 3 detik
             setTimeout(() => {
                 toast.classList.add('translate-y-20', 'opacity-0');
             }, 3000);
-        }
-
-        // 9. Jalankan render pertama kali saat halaman dimuat
-        window.onload = () => {
-            renderJadwal();
         };
-
     </script>
 </body>
 </html>
