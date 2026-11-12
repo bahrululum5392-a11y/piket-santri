@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Piket Santri</title>
+    
+    <!-- Menggunakan Tailwind CSS untuk styling yang cepat dan responsif -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Konfigurasi warna kustom untuk tema Pesantren/Islami yang segar (Hijau Zamrud) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Mengambil font Inter dari Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Mengambil Ikon dari FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* Animasi sederhana untuk elemen yang muncul */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Kustomisasi scrollbar agar lebih rapi */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #10b981; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #059669; 
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen font-sans">
+
+    <!-- Navbar / Header Aplikasi -->
+    <header class="bg-emerald-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-broom text-2xl"></i>
+                <h1 class="text-xl md:text-2xl font-bold tracking-wide">Smart Piket Santri</h1>
+            </div>
+            <p class="hidden md:block text-emerald-100 text-sm italic">"Kebersihan adalah sebagian dari iman"</p>
+        </div>
+    </header>
+
+    <!-- Kontainer Utama -->
+    <main class="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Bagian Kiri: Formulir Input -->
+        <section class="lg:col-span-1">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-24">
+                <h2 class="text-lg font-semibold text-gray-700 mb-4 border-b pb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-emerald-500"></i> Tambah Jadwal
+                </h2>
+                
+                <form id="piketForm" class="space-y-4">
+                    <!-- Input Nama Santri -->
+                    <div>
+                        <label for="namaSantri" class="block text-sm font-medium text-gray-600 mb-1">Nama Santri</label>
+                        <input type="text" id="namaSantri" required placeholder="Contoh: Ahmad" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+                    </div>
+
+                    <!-- Pilihan Hari -->
+                    <div>
+                        <label for="hariPiket" class="block text-sm font-medium text-gray-600 mb-1">Hari Piket</label>
+                        <select id="hariPiket" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none bg-white">
+                            <option value="" disabled selected>Pilih Hari...</option>
+                            <option value="Senin">Senin</option>
+                            <option value="Selasa">Selasa</option>
+                            <option value="Rabu">Rabu</option>
+                            <option value="Kamis">Kamis</option>
+                            <option value="Jumat">Jumat</option>
+                            <option value="Sabtu">Sabtu</option>
+                            <option value="Minggu">Minggu</option>
+                        </select>
+                    </div>
+
+                    <!-- Pilihan Tugas -->
+                    <div>
+                        <label for="tugasPiket" class="block text-sm font-medium text-gray-600 mb-1">Tugas Utama</label>
+                        <select id="tugasPiket" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none bg-white">
+                            <option value="" disabled selected>Pilih Tugas...</option>
+                            <option value="Menyapu Asrama">Menyapu Asrama</option>
+                            <option value="Mengepel Lorong">Mengepel Lorong</option>
+                            <option value="Membersihkan Kamar Mandi">Kamar Mandi</option>
+                            <option value="Membuang Sampah">Membuang Sampah</option>
+                            <option value="Merapikan Sandal">Merapikan Sandal</option>
+                            <option value="Keamanan/Jaga Malam">Keamanan</option>
+                        </select>
+                    </div>
+
+                    <!-- Tombol Simpan -->
+                    <button type="submit" 
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-lg transition-colors shadow-sm flex justify-center items-center gap-2 mt-2">
+                        <i class="fa-solid fa-plus"></i> Simpan Jadwal
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Bagian Kanan: Tampilan Jadwal -->
+        <section class="lg:col-span-2">
+            <!-- Header Tampilan Jadwal dengan Tombol Reset -->
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fa-regular fa-calendar-check text-emerald-500"></i> Papan Jadwal
+                </h2>
+                <button onclick="hapusSemuaData()" class="text-sm text-red-500 hover:text-red-700 font-medium flex items-center gap-1 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md transition-colors">
+                    <i class="fa-solid fa-trash-can"></i> Kosongkan
+                </button>
+            </div>
+
+            <!-- Grid Hari (Akan diisi oleh JavaScript) -->
+            <div id="scheduleGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Elemen hari akan di-render di sini -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Notifikasi Toast (Pengganti Alert) -->
+    <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <div class="bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+            <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+            <span id="toastMessage" class="font-medium">Pesan notifikasi di sini</span>
+        </div>
+    </div>
+
+    <!-- JavaScript Logika Aplikasi -->
+    <script>
+        // 1. Inisialisasi Data dari Local Storage (Penyimpanan Browser)
+        // Jika tidak ada data sebelumnya, gunakan array kosong []
+        let daftarPiket = JSON.parse(localStorage.getItem('dataPiketSantri')) || [];
+        
+        // Daftar hari berurutan
+        const namaHari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
+        // 2. Fungsi untuk merender (menampilkan) jadwal ke layar
+        function renderJadwal() {
+            const grid = document.getElementById('scheduleGrid');
+            grid.innerHTML = ''; // Kosongkan grid terlebih dahulu
+
+            // Loop untuk setiap hari dalam seminggu
+            namaHari.forEach(hari => {
+                // Saring data piket hanya untuk hari yang sedang di-loop
+                const piketHariIni = daftarPiket.filter(piket => piket.hari === hari);
+
+                // Buat kartu (card) untuk hari tersebut
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden fade-in';
+                
+                // Header kartu (Nama Hari)
+                let cardHTML = `
+                    <div class="bg-emerald-50 px-4 py-3 border-b border-emerald-100 flex justify-between items-center">
+                        <h3 class="font-bold text-emerald-800">${hari}</h3>
+                        <span class="text-xs font-semibold bg-emerald-200 text-emerald-800 px-2 py-1 rounded-full">
+                            ${piketHariIni.length} Orang
+                        </span>
+                    </div>
+                    <ul class="p-0 m-0 divide-y divide-gray-100">
+                `;
+
+                // Jika tidak ada yang piket di hari ini
+                if (piketHariIni.length === 0) {
+                    cardHTML += `
+                        <li class="px-4 py-6 text-center text-gray-400 text-sm italic">
+                            Belum ada jadwal
+                        </li>
+                    `;
+                } else {
+                    // Jika ada, buat daftar (list) untuk setiap santri
+                    piketHariIni.forEach(piket => {
+                        // Cek status selesai untuk styling coretan (strikethrough)
+                        const textStyle = piket.selesai ? 'line-through text-gray-400' : 'text-gray-700';
+                        const checkIcon = piket.selesai ? 'fa-solid fa-circle-check text-emerald-500' : 'fa-regular fa-circle text-gray-300';
+                        const bgStyle = piket.selesai ? 'bg-gray-50' : 'bg-white hover:bg-gray-50';
+
+                        cardHTML += `
+                            <li class="px-4 py-3 flex justify-between items-center transition-colors ${bgStyle} group">
+                                <div class="flex items-center gap-3 cursor-pointer" onclick="toggleStatus('${piket.id}')">
+                                    <i class="${checkIcon} text-lg transition-colors group-hover:text-emerald-400"></i>
+                                    <div>
+                                        <p class="font-medium ${textStyle}">${piket.nama}</p>
+                                        <p class="text-xs text-gray-500 flex items-center gap-1">
+                                            <i class="fa-solid fa-tag text-emerald-400"></i> ${piket.tugas}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button onclick="hapusPiket('${piket.id}')" class="text-gray-300 hover:text-red-500 transition-colors p-2" title="Hapus">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </li>
+                        `;
+                    });
+                }
+
+                cardHTML += `</ul>`;
+                card.innerHTML = cardHTML;
+                grid.appendChild(card);
+            });
+        }
+
+        // 3. Menangani Pengiriman Formulir (Tambah Data)
+        document.getElementById('piketForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // Mencegah halaman me-refresh
+
+            // Mengambil nilai dari inputan
+            const inputNama = document.getElementById('namaSantri').value.trim();
+            const inputHari = document.getElementById('hariPiket').value;
+            const inputTugas = document.getElementById('tugasPiket').value;
+
+            // Membuat objek data baru
+            const dataBaru = {
+                id: Date.now().toString(), // ID unik menggunakan timestamp
+                nama: inputNama,
+                hari: inputHari,
+                tugas: inputTugas,
+                selesai: false // Default status belum selesai
+            };
+
+            // Tambahkan ke array dan simpan ke local storage
+            daftarPiket.push(dataBaru);
+            simpanData();
+            
+            // Reset formulir dan render ulang layar
+            this.reset();
+            renderJadwal();
+            tampilkanToast(`Berhasil menambahkan ${inputNama} ke hari ${inputHari}!`, 'success');
+        });
+
+        // 4. Fungsi Mengubah Status Selesai/Belum Selesai
+        function toggleStatus(id) {
+            // Cari data berdasarkan ID, lalu balikkan status 'selesai'-nya
+            daftarPiket = daftarPiket.map(piket => {
+                if (piket.id === id) {
+                    return { ...piket, selesai: !piket.selesai };
+                }
+                return piket;
+            });
+            simpanData();
+            renderJadwal();
+        }
+
+        // 5. Fungsi Menghapus Satu Data Piket
+        function hapusPiket(id) {
+            // Saring array, buang data yang ID-nya cocok dengan yang dihapus
+            daftarPiket = daftarPiket.filter(piket => piket.id !== id);
+            simpanData();
+            renderJadwal();
+            tampilkanToast('Jadwal berhasil dihapus.', 'info');
+        }
+
+        // 6. Fungsi Menghapus Semua Data (Kosongkan)
+        function hapusSemuaData() {
+            // Kita buat konfirmasi kustom sederhana menggunakan fitur DOM agar tidak menggunakan alert() bawaan
+            const konfirmasi = window.confirm("Apakah Anda yakin ingin menghapus seluruh jadwal piket?");
+            if (konfirmasi) {
+                daftarPiket = [];
+                simpanData();
+                renderJadwal();
+                tampilkanToast('Semua jadwal telah dikosongkan.', 'danger');
+            }
+        }
+
+        // 7. Fungsi Pembantu untuk Menyimpan Data ke Local Storage
+        function simpanData() {
+            localStorage.setItem('dataPiketSantri', JSON.stringify(daftarPiket));
+        }
+
+        // 8. Fungsi Notifikasi Toast (Pengganti Alert)
+        function tampilkanToast(pesan, tipe = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMessage.textContent = pesan;
+            
+            // Ganti ikon berdasarkan tipe notifikasi
+            if(tipe === 'success') {
+                toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
+            } else if(tipe === 'danger') {
+                toastIcon.className = "fa-solid fa-triangle-exclamation text-red-400";
+            } else {
+                toastIcon.className = "fa-solid fa-circle-info text-blue-400";
+            }
+
+            // Tampilkan toast
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            // Sembunyikan setelah 3 detik
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        // 9. Jalankan render pertama kali saat halaman dimuat
+        window.onload = () => {
+            renderJadwal();
+        };
+
+    </script>
+</body>
+</html>
