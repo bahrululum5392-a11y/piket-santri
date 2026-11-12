@@ -70,6 +70,10 @@
             <div class="flex items-center gap-3">
                 <i class="fa-solid fa-broom text-2xl"></i>
                 <h1 class="text-xl md:text-2xl font-bold tracking-wide">Smart Piket Santri</h1>
+                <!-- Indikator Live Tersinkronisasi -->
+                <span id="cloudStatus" class="hidden text-xs bg-emerald-800 px-2 py-1 rounded-full text-emerald-100 items-center gap-1 shadow-inner">
+                    <i class="fa-solid fa-cloud-arrow-up text-emerald-300"></i> Live
+                </span>
             </div>
             <p class="hidden md:block text-emerald-100 text-sm italic">"Kebersihan adalah sebagian dari iman"</p>
         </div>
@@ -184,11 +188,11 @@
         const namaHari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
         let daftarPiket = [];
         
-        // 1. Konfigurasi Penyimpanan Data Permanen (Firebase Cloud Storage)
-        let db, jadawalRef, isCloud = false;
+        // 1. Konfigurasi Penyimpanan Data Permanen Terpusat (Bisa diakses semua device/akun)
+        let db, jadawalRef, appId, isCloud = false;
         
         try {
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'smart-piket-default';
+            appId = typeof __app_id !== 'undefined' ? __app_id : 'smart-piket-default';
             const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
             
             if (firebaseConfig) {
@@ -196,11 +200,11 @@
                 const auth = getAuth(app);
                 db = getFirestore(app);
                 
-                // Menyiapkan referensi database awan publik
+                // Menyiapkan referensi database awan PUBLIK (agar semua orang melihat data yang sama)
                 jadawalRef = collection(db, 'artifacts', appId, 'public', 'data', 'jadwalPiket');
                 
                 const initAuth = async () => {
-                    // Otentikasi agar data tersimpan aman
+                    // Otentikasi
                     if (typeof __initial_auth_token !== 'undefined') {
                         await signInWithCustomToken(auth, __initial_auth_token);
                     } else {
@@ -209,8 +213,15 @@
                     
                     if (!auth.currentUser) return;
                     isCloud = true;
+
+                    // Tampilkan indikator Live/Sinkronisasi di UI
+                    const cloudStatus = document.getElementById('cloudStatus');
+                    if(cloudStatus) {
+                        cloudStatus.classList.remove('hidden');
+                        cloudStatus.classList.add('flex');
+                    }
                     
-                    // Mendengarkan perubahan data di Cloud secara real-time
+                    // Mendengarkan perubahan data di Cloud secara real-time untuk SEMUA perangkat
                     onSnapshot(jadawalRef, (snapshot) => {
                         daftarPiket = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         window.renderJadwal();
@@ -294,7 +305,7 @@
             const dataBaru = { nama, hari, tugas, selesai: false };
 
             if (isCloud && jadawalRef) {
-                // Simpan ke Cloud (ID otomatis dibuat)
+                // Simpan ke Cloud Database (Tersinkronisasi Semua Device)
                 await addDoc(jadawalRef, dataBaru);
             } else {
                 // Simpan secara lokal (mode fallback)
@@ -314,8 +325,8 @@
             if (!piket) return;
 
             if (isCloud && db) {
-                // Update ke Cloud
-                const docRef = doc(jadawalRef, id);
+                // Update ke Cloud Database (Tersinkronisasi)
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'jadwalPiket', id);
                 await updateDoc(docRef, { selesai: !piket.selesai });
             } else {
                 piket.selesai = !piket.selesai;
@@ -327,8 +338,8 @@
         // 5. Fungsi Menghapus Satu Data Piket
         window.hapusPiket = async function(id) {
             if (isCloud && db) {
-                // Hapus dari Cloud
-                const docRef = doc(jadawalRef, id);
+                // Hapus dari Cloud (Hilang di semua device)
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'jadwalPiket', id);
                 await deleteDoc(docRef);
             } else {
                 daftarPiket = daftarPiket.filter(p => p.id !== id);
@@ -352,9 +363,9 @@
         // 7. Fungsi Konfirmasi Menghapus Semua Data
         window.konfirmasiKosongkan = async function() {
             if (isCloud && db) {
-                // Hapus satu per satu dari cloud database
+                // Hapus satu per satu dari cloud database untuk semua orang
                 for (const piket of daftarPiket) {
-                    const docRef = doc(jadawalRef, piket.id);
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'jadwalPiket', piket.id);
                     await deleteDoc(docRef);
                 }
             } else {
